@@ -10,10 +10,13 @@ import UIKit
 class ViewController: UIViewController {
 	// MARK: Variables
 	private var uniqueCountries: [String] = []
-	private let searchController = UISearchController(searchResultsController: nil)
+	
+	private var filteredCountry: [String] = []
+	
+	private var searchController: UISearchController!
 	
 	// MARK: TableView
-	private let tableView: UITableView = {
+	private var tableView: UITableView = {
 		let tableView = UITableView()
 		tableView.backgroundColor = .systemBackground
 		tableView.allowsSelection = true
@@ -26,13 +29,12 @@ class ViewController: UIViewController {
 		super.viewDidLoad()
 		// Do any additional setup after loading the view.
 		setupSearchController()
-		setupTableView()
+		configureUI()
 		parseJSON()
 		
 	}
 	// MARK: TableView Setup
-	private func setupTableView(){
-		view.backgroundColor = .systemRed
+	private func configureUI(){
 		view.addSubview(tableView)
 		tableView.delegate = self
 		tableView.dataSource = self
@@ -43,14 +45,16 @@ class ViewController: UIViewController {
 	}
 	
 	private func setupSearchController(){
-		self.searchController.searchResultsUpdater = self
-		self.searchController.obscuresBackgroundDuringPresentation = false
-		self.searchController.hidesNavigationBarDuringPresentation = false
-		self.searchController.searchBar.placeholder = "Search Country"
+		searchController = UISearchController(searchResultsController: nil)
+		searchController.searchResultsUpdater = self
+		searchController.obscuresBackgroundDuringPresentation = false
+		searchController.hidesNavigationBarDuringPresentation = false
+		searchController.searchBar.placeholder = "Search Country"
+		navigationItem.searchController = searchController
+		navigationItem.hidesSearchBarWhenScrolling = false
+		definesPresentationContext = true
+		tableView.tableHeaderView = searchController.searchBar
 		
-		self.navigationItem.searchController = searchController
-		self.definesPresentationContext = false
-		self.navigationItem.hidesSearchBarWhenScrolling = false
 	}
 	
 	private func parseJSON(){
@@ -66,7 +70,7 @@ class ViewController: UIViewController {
 			do {
 				let response = try JSONDecoder().decode(PopulationResponse.self, from: data)
 				let countries = response.data.map { $0.country }
-				let filteredCountries = Set(countries.filter { $0.first.map { $0.isUppercase && $0.isLetter } ?? false })
+				let filteredCountries = Set(countries.filter { $0.first.map { $0.isLetter } ?? false })
 				self?.uniqueCountries = Array(Set(filteredCountries)).sorted()
 				DispatchQueue.main.async {
 					self?.tableView.reloadData()
@@ -81,18 +85,25 @@ class ViewController: UIViewController {
 
 extension ViewController: UISearchResultsUpdating {
 	func updateSearchResults(for searchController: UISearchController) {
-		<#code#>
+		guard let searchText = searchController.searchBar.text, !searchText.isEmpty else {
+			filteredCountry = uniqueCountries
+			tableView.reloadData()
+			return
+		}
+		filteredCountry = uniqueCountries.filter{$0.lowercased().contains(searchText.lowercased())}
+		tableView.reloadData()
 	}
 }
 
 extension ViewController: UITableViewDelegate, UITableViewDataSource {
 	public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-		return uniqueCountries.count
+		return searchController.isActive ? filteredCountry.count : uniqueCountries.count
 	}
 	
 	public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
 		let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-		cell.textLabel?.text = uniqueCountries[indexPath.row]
+		let country = searchController.isActive ? filteredCountry[indexPath.row] : uniqueCountries[indexPath.row]
+		cell.textLabel?.text = country
 		return cell
 	}
 }
