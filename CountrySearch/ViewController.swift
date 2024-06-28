@@ -9,9 +9,10 @@ import UIKit
 
 class ViewController: UIViewController {
 	// MARK: Variables
-	private var uniqueCountries: [String] = []
-	
-	private var filteredCountry: [String] = []
+//	private var uniqueCountries: [String] = []
+//	
+	private var filteredCountry: [CountryInfo] = []
+	private var countries: [CountryInfo] = []
 	
 	private var searchController: UISearchController!
 	
@@ -20,7 +21,7 @@ class ViewController: UIViewController {
 		let tableView = UITableView()
 		tableView.backgroundColor = .systemBackground
 		tableView.allowsSelection = true
-		tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
+		tableView.register(CountryTableViewCell.self, forCellReuseIdentifier: CountryTableViewCell.identifier)
 		
 		return tableView
 	}()
@@ -58,52 +59,60 @@ class ViewController: UIViewController {
 	}
 	
 	private func parseJSON(){
-		guard let url = URL(string: "https://countriesnow.space/api/v0.1/countries/population/cities") else {
+		guard let url = URL(string: "https://restcountries.com/v3.1/all") else {
 			print("Invalid URL")
 			return
 		}
-		let task = URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-			guard let data = data, error == nil else {
-				print("Error fetching data: \(error?.localizedDescription ?? "Unknown error")")
-				return
-			}
-			do {
-				let response = try JSONDecoder().decode(PopulationResponse.self, from: data)
-				let countries = response.data.map { $0.country }
-				let filteredCountries = Set(countries.filter { $0.first.map { $0.isLetter } ?? false })
-				self?.uniqueCountries = Array(Set(filteredCountries)).sorted()
-				DispatchQueue.main.async {
-					self?.tableView.reloadData()
+		URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+				guard let data = data, error == nil else {
+					print("Error fetching data: \(error?.localizedDescription ?? "Unknown error")")
+					return
 				}
-			} catch {
-				print("Error decoding JSON: \(error)")
-			}
-		}
-		task.resume()
+				do {
+					let countries = try JSONDecoder().decode([CountryInfo].self, from: data)
+					DispatchQueue.main.async {
+						self?.updateUI(with: countries.sorted { $0.name.common < $1.name.common })
+					}
+				} catch {
+					print("Error decoding JSON: \(error)")
+				}
+			}.resume()
+	}
+	private func updateUI(with countries: [CountryInfo]){
+		self.countries = countries
+		self.tableView.reloadData()
 	}
 }
 
+
 extension ViewController: UISearchResultsUpdating {
 	func updateSearchResults(for searchController: UISearchController) {
-		guard let searchText = searchController.searchBar.text, !searchText.isEmpty else {
-			filteredCountry = uniqueCountries
+		guard let searchText = searchController.searchBar.text?.lowercased(), !searchText.isEmpty else {
+			filteredCountry = countries
 			tableView.reloadData()
 			return
 		}
-		filteredCountry = uniqueCountries.filter{$0.lowercased().contains(searchText.lowercased())}
+		filteredCountry = countries.filter { country in
+			let matchesName = country.name.common.lowercased().contains(searchText)
+			let matchesCapital = country.capital?.first?.lowercased().contains(searchText) ?? false
+			let matchesPopulation = String(country.population).contains(searchText)
+			return matchesName || matchesCapital || matchesPopulation
+		
+		}
 		tableView.reloadData()
 	}
 }
 
 extension ViewController: UITableViewDelegate, UITableViewDataSource {
 	public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-		return searchController.isActive ? filteredCountry.count : uniqueCountries.count
+		return searchController.isActive ? filteredCountry.count : countries.count
 	}
 	
 	public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-		let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-		let country = searchController.isActive ? filteredCountry[indexPath.row] : uniqueCountries[indexPath.row]
-		cell.textLabel?.text = country
+		guard let cell = tableView.dequeueReusableCell(withIdentifier: CountryTableViewCell.identifier, for: indexPath) as? CountryTableViewCell else { fatalError("Error")}
+		
+		let country = searchController.isActive ? filteredCountry[indexPath.row] : countries[indexPath.row]
+		cell.configure(with: country)
 		return cell
 	}
 }
