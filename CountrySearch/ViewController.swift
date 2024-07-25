@@ -10,11 +10,22 @@ import UIKit
 class ViewController: UIViewController {
 	// MARK: Variables
 //	private var uniqueCountries: [String] = []
-//	
+//
+		
+	// Segmented Control as a class-level property
+	private lazy var segmentControl: UISegmentedControl = {
+		let items = ["Light", "Dark"]
+		let segmentControl = UISegmentedControl(items: items)
+		segmentControl.selectedSegmentIndex = 0
+		segmentControl.addTarget(self, action: #selector(themeChanged(_:)), for: .valueChanged)
+		return segmentControl
+	}()
+	
 	private var filteredCountry: [CountryInfo] = []
 	private var countries: [CountryInfo] = []
 	
-	private var searchController: UISearchController!
+	private var searchController = UISearchController(searchResultsController: nil)
+	
 	
 	// MARK: TableView
 	private var tableView: UITableView = {
@@ -28,35 +39,50 @@ class ViewController: UIViewController {
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
-		// Do any additional setup after loading the view.
+		view.backgroundColor = .systemBackground
+		
 		setupSearchController()
 		configureUI()
 		parseJSON()
 		
 	}
+	override func viewWillAppear(_ animated: Bool) {
+		super.viewWillAppear(animated)
+		navigationController?.setNavigationBarHidden(false, animated: false)
+	}
 	// MARK: TableView Setup
 	private func configureUI(){
+		view.addSubview(segmentControl)
+		
+		segmentControl.snp.makeConstraints { make in
+			make.top.equalTo(view.safeAreaLayoutGuide).offset(10)
+			make.centerX.equalTo(view.snp.centerX)
+		}
+		
+		
 		view.addSubview(tableView)
 		tableView.delegate = self
 		tableView.dataSource = self
-		tableView.translatesAutoresizingMaskIntoConstraints = false
 		tableView.snp.makeConstraints { make in
-			make.edges.equalToSuperview()
+			make.top.equalTo(segmentControl.snp.bottom).offset(10)
+			make.left.right.equalTo(view)
+			make.bottom.equalTo(view.safeAreaLayoutGuide.snp.bottom)
 		}
+		
 	}
 	
 	private func setupSearchController(){
-		searchController = UISearchController(searchResultsController: nil)
 		searchController.searchResultsUpdater = self
 		searchController.obscuresBackgroundDuringPresentation = false
 		searchController.hidesNavigationBarDuringPresentation = false
 		searchController.searchBar.placeholder = "Search Country"
+		
 		navigationItem.searchController = searchController
 		navigationItem.hidesSearchBarWhenScrolling = false
-		definesPresentationContext = true
-		tableView.tableHeaderView = searchController.searchBar
-		
+		definesPresentationContext = false
+		title = "Country Search"
 	}
+	
 	
 	private func parseJSON(){
 		guard let url = URL(string: "https://restcountries.com/v3.1/all") else {
@@ -81,6 +107,14 @@ class ViewController: UIViewController {
 	private func updateUI(with countries: [CountryInfo]){
 		self.countries = countries
 		self.tableView.reloadData()
+	}
+
+	@objc func themeChanged(_ sender: UISegmentedControl){
+		if sender.selectedSegmentIndex == 0 {
+			view.overrideUserInterfaceStyle = .light
+		} else {
+			view.overrideUserInterfaceStyle = .dark
+		}
 	}
 }
 
