@@ -27,7 +27,6 @@ class CountryTableViewCell: UITableViewCell {
 	private func configureUI(){
 		[countryLabel, capitalLabel,populationLabel, flagImageView].forEach {
 			contentView.addSubview($0)
-			$0.translatesAutoresizingMaskIntoConstraints = false
 		}
 		flagImageView.snp.makeConstraints { make in
 			make.left.equalToSuperview().offset(10)
