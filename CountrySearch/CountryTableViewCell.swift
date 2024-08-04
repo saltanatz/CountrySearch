@@ -11,10 +11,10 @@ class CountryTableViewCell: UITableViewCell {
 	
 	static let identifier = "CountryTableViewCell"
 	
-	private var countryLabel = UILabel()
-	private var capitalLabel = UILabel()
-	private var populationLabel = UILabel()
+	private var FirstLabel = UILabel()
+	private var SecondLabel = UILabel()
 	private let flagImageView = UIImageView()
+	let container = UIView()
 	
 	override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
 		super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -25,35 +25,48 @@ class CountryTableViewCell: UITableViewCell {
 		fatalError("init(coder:) has not been implemented")
 	}
 	private func configureUI(){
-		[countryLabel, capitalLabel,populationLabel, flagImageView].forEach {
-			contentView.addSubview($0)
+		contentView.addSubview(container)
+		
+		container.addSubview(flagImageView)
+		container.addSubview(FirstLabel)
+		container.addSubview(SecondLabel)
+		
+		container.snp.makeConstraints { make in
+			make.left.equalToSuperview().offset(8)
+			make.right.equalToSuperview().offset(-8)
+			make.top.equalToSuperview().offset(8)
+			make.bottom.equalToSuperview().offset(-8)
 		}
 		flagImageView.snp.makeConstraints { make in
 			make.left.equalToSuperview().offset(10)
 			make.centerY.equalToSuperview()
 			make.width.height.equalTo(40)
 		}
-		countryLabel.snp.makeConstraints { make in
+		FirstLabel.snp.makeConstraints { make in
 			make.left.equalTo(flagImageView.snp.right).offset(10)
-			make.top.equalToSuperview().offset(10)
+			make.top.equalToSuperview().offset(20)
 			make.right.equalToSuperview().offset(-10)
 		}
-		capitalLabel.snp.makeConstraints { make in
-			make.left.right.equalTo(countryLabel)
-			make.top.equalTo(countryLabel.snp.bottom).offset(5)
+		SecondLabel.snp.makeConstraints { make in
+			make.left.right.equalTo(FirstLabel)
+			make.top.equalTo(FirstLabel.snp.bottom).offset(5)
 		}
-		populationLabel.snp.makeConstraints { make in
-			make.left.right.equalTo(countryLabel)
-			make.top.equalTo(capitalLabel.snp.bottom
-			).offset(5)
-			make.bottom.equalToSuperview().offset(-10)
-		}
+		contentView.backgroundColor = UIColor(red: 222.0/255.0, green: 239.0/255.0, blue: 245/255.0, alpha: 1.0)
+		container.layer.cornerRadius = 10
+		container.backgroundColor = .white
 	}
 	
-	func configure(with country: CountryInfo){
-		countryLabel.text = country.name.common
-		capitalLabel.text = "Capital: \(country.capital?.first ?? "N/A")"
-		populationLabel.text = "Population: \(country.population)"
+	func configure(with country: CountryInfo, display: Int){
+		switch display {
+		case 0:
+			FirstLabel.text = "\(country.name.common)"
+			SecondLabel.text = "Area: \(country.area ?? 0)"
+		case 1:
+			FirstLabel.text = "\(country.capital?.first ?? "")"
+			SecondLabel.text = "Population: \(country.population)"
+		default:
+			break
+		}
 		if let urlString = country.flags.png, let url = URL(string: urlString) {
 			flagImageView.loadImage(from: url)
 		} else {
