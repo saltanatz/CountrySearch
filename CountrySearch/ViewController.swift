@@ -151,6 +151,23 @@ extension ViewController: UISearchResultsUpdating {
 }
 
 extension ViewController: UITableViewDelegate, UITableViewDataSource {
+	func tableView(_ tableView: UITableView, editingStyleForRowAt indexPath: IndexPath) -> UITableViewCell.EditingStyle {
+		return .delete
+	}
+	func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+		if editingStyle == .delete {
+			tableView.beginUpdates()
+			
+			if searchController.isActive {
+				filteredCountry.remove(at: indexPath.row)
+			} else {
+				countries.remove(at: indexPath.row)
+			}
+			tableView.deleteRows(at: [indexPath], with: .fade)
+			
+			tableView.endUpdates()
+		}
+	}
 	public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
 		return searchController.isActive ? filteredCountry.count : countries.count
 	}
